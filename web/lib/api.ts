@@ -84,4 +84,5 @@ export async function updateRoute(id: string, data: Partial<RouteInput>): Promis
 export async function deleteRoute(id: string): Promise<void> {
   const res = await fetch(`/api/routes/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete route');
+
 }

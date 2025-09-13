@@ -150,6 +150,41 @@ export function buildServer() {
     return { success: true };
   });
 
+  // Favourites
+  app.get('/me/favourites', {
+    preHandler: [app.authenticate],
+  }, async (req) => {
+    const favs = await prisma.favourite.findMany({
+      where: { userId: req.user.id },
+      include: { spot: true },
+    });
+    return favs.map((f) => f.spot);
+  });
+
+  app.post('/me/favourites', {
+    preHandler: [app.authenticate],
+    schema: {
+      body: z.object({ spotId: z.string().uuid() }),
+    },
+  }, async (req) => {
+    const { spotId } = req.body;
+    await prisma.favourite.create({
+      data: { userId: req.user.id, spotId },
+    });
+    return prisma.spot.findUnique({ where: { id: spotId } });
+  });
+
+  app.delete('/me/favourites/:spotId', {
+    preHandler: [app.authenticate],
+    schema: { params: z.object({ spotId: z.string().uuid() }) },
+  }, async (req) => {
+    const { spotId } = req.params;
+    await prisma.favourite.delete({
+      where: { userId_spotId: { userId: req.user.id, spotId } },
+    });
+    return { success: true };
+  });
+
   // Spot schema
   const spotBody = z.object({
     name: z.string(),
