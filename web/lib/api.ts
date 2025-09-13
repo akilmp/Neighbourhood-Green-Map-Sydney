@@ -42,3 +42,24 @@ export async function resolveReport(id: string, action: 'approve' | 'reject'): P
   if (!res.ok) throw new Error('Failed to resolve report');
 
 }
+
+export async function fetchFavourites(): Promise<Spot[]> {
+  const res = await fetch('/api/me/favourites');
+  if (!res.ok) throw new Error('Failed to fetch favourites');
+  return res.json();
+}
+
+export async function addFavourite(spotId: string): Promise<Spot> {
+  const res = await fetch('/api/me/favourites', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spotId }),
+  });
+  if (!res.ok) throw new Error('Failed to add favourite');
+  return res.json();
+}
+
+export async function removeFavourite(spotId: string): Promise<void> {
+  const res = await fetch(`/api/me/favourites/${spotId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to remove favourite');
+}
