@@ -315,6 +315,40 @@ export function buildServer() {
     return { score: total._sum.value ?? 0 };
   });
 
+  // Favourites
+  app.get('/me/favourites', {
+    preHandler: [app.authenticate],
+  }, async (req) => {
+    return prisma.spot.findMany({
+      where: { favourites: { some: { userId: req.user.id } } },
+      include: { photos: true, tags: { include: { tag: true } } },
+    });
+  });
+
+  app.post('/me/favourites/:id', {
+    preHandler: [app.authenticate],
+    schema: { params: z.object({ id: z.string().uuid() }) },
+  }, async (req) => {
+    const { id } = req.params;
+    await prisma.favourite.upsert({
+      where: { userId_spotId: { userId: req.user.id, spotId: id } },
+      create: { userId: req.user.id, spotId: id },
+      update: {},
+    });
+    return { success: true };
+  });
+
+  app.delete('/me/favourites/:id', {
+    preHandler: [app.authenticate],
+    schema: { params: z.object({ id: z.string().uuid() }) },
+  }, async (req) => {
+    const { id } = req.params;
+    await prisma.favourite.delete({
+      where: { userId_spotId: { userId: req.user.id, spotId: id } },
+    });
+    return { success: true };
+  });
+
   return app;
 }
 

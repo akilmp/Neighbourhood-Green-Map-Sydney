@@ -12,6 +12,8 @@ model User {
   email        String   @unique
   passwordHash String
   spots        Spot[]
+  votes        Vote[]
+  favourites   Favourite[]
   emailVerified Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -28,6 +30,7 @@ model Spot {
   photos      SpotPhoto[]
   tags        SpotTag[]
   votes       Vote[]
+  favourites  Favourite[]
   user        User?        @relation(fields: [userId], references: [id])
   userId      String?
   createdAt   DateTime     @default(now())
@@ -65,6 +68,16 @@ model Vote {
   spot      Spot @relation(fields: [spotId], references: [id])
   spotId    String
   value     Int
+  createdAt DateTime @default(now())
+
+  @@id([userId, spotId])
+}
+
+model Favourite {
+  user      User @relation(fields: [userId], references: [id])
+  userId    String
+  spot      Spot @relation(fields: [spotId], references: [id])
+  spotId    String
   createdAt DateTime @default(now())
 
   @@id([userId, spotId])
