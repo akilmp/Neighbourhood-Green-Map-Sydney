@@ -29,7 +29,11 @@ export default function FilterBar({
         <option value="">All Categories</option>
         <option value="park">Park</option>
         <option value="garden">Garden</option>
-        <option value="community">Community</option>
+        <option value="walk">Walk</option>
+        <option value="lookout">Lookout</option>
+        <option value="playground">Playground</option>
+        <option value="beach">Beach</option>
+        <option value="other">Other</option>
       </select>
       <input
         type="text"

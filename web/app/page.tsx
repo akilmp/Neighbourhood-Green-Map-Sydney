@@ -21,7 +21,7 @@ export default function HomePage() {
         tags: filters.tags
           ? filters.tags.split(',').map((t) => t.trim()).filter(Boolean)
           : undefined,
-        q: filters.category || undefined,
+        category: filters.category || undefined,
       }),
   });
 

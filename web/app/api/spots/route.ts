@@ -5,7 +5,7 @@ const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const params = new URLSearchParams();
-  for (const key of ['bbox', 'radius', 'tags', 'q']) {
+  for (const key of ['bbox', 'radius', 'tags', 'category']) {
     const value = url.searchParams.get(key);
     if (value) params.set(key, value);
   }
