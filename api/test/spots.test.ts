@@ -30,7 +30,7 @@ describe('spots CRUD', () => {
     const createRes = await app.inject({
       method: 'POST',
       url: '/spots',
-      payload: { name: 'My Spot', lat: 1, lng: 2 },
+      payload: { name: 'My Spot', lat: 1, lng: 2, category: 'park' },
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(createRes.statusCode).toBe(200);
