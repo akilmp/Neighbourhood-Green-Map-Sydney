@@ -1,7 +1,7 @@
 import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRedis from '@fastify/redis';
-import { PrismaClient, Spot } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
@@ -86,6 +86,9 @@ export function buildServer() {
     lng: z.number(),
     photos: z.array(z.string().url()).optional(),
     tags: z.array(z.string()).optional(),
+    facilities: z.record(z.boolean()).optional(),
+    category: z.enum(['park', 'garden', 'walk', 'lookout', 'playground', 'beach', 'other']),
+    isPublished: z.boolean().optional(),
   });
 
   // Spots CRUD
@@ -95,9 +98,9 @@ export function buildServer() {
       body: spotBody,
     },
   }, async (req) => {
-    const { name, description, lat, lng, photos = [], tags = [] } = req.body;
+    const { name, description, lat, lng, photos = [], tags = [], facilities = {}, category, isPublished = false } = req.body;
     const id = crypto.randomUUID();
-    await prisma.$executeRaw`INSERT INTO "Spot"(id, name, description, location, "userId") VALUES (${id}, ${name}, ${description}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${req.user.id})`;
+    await prisma.$executeRaw`INSERT INTO "Spot"(id, name, description, location, facilities, category, "isPublished", "userId") VALUES (${id}, ${name}, ${description}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${JSON.stringify(facilities)}, ${category}, ${isPublished}, ${req.user.id})`;
 
     if (photos.length) {
       await prisma.spotPhoto.createMany({
@@ -138,20 +141,45 @@ export function buildServer() {
     preHandler: [app.authenticate],
     schema: {
       querystring: z.object({
-        lat: z.number().optional(),
-        lng: z.number().optional(),
+        q: z.string().optional(),
+        tags: z.string().optional(),
+        bbox: z.string().optional(),
         radius: z.number().optional(),
+        center: z.string().optional(),
+        page: z.number().int().min(1).optional(),
+        pageSize: z.number().int().min(1).max(100).optional(),
       }),
     },
   }, async (req) => {
-    const { lat, lng, radius } = req.query;
-    if (lat !== undefined && lng !== undefined && radius !== undefined) {
-      const spots = await prisma.$queryRaw<Spot[]>`
-        SELECT * FROM "Spot" WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${radius})
+    const { q, tags, bbox, radius, center, page = 1, pageSize = 20 } = req.query;
+    let ids: { id: string }[] | null = null;
+
+    if (radius && center) {
+      const [lng, lat] = center.split(',').map(Number);
+      ids = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Spot" WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${radius})
       `;
-      return spots;
+    } else if (bbox) {
+      const [minLng, minLat, maxLng, maxLat] = bbox.split(',').map(Number);
+      ids = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Spot" WHERE location && ST_MakeEnvelope(${minLng}, ${minLat}, ${maxLng}, ${maxLat}, 4326)
+      `;
     }
-    return prisma.spot.findMany({ include: { photos: true, tags: { include: { tag: true } } } });
+
+    const where: any = {};
+    if (ids) where.id = { in: ids.map((r) => r.id) };
+    if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (tags) {
+      const tagArr = tags.split(',');
+      where.tags = { some: { tag: { name: { in: tagArr } } } };
+    }
+
+    return prisma.spot.findMany({
+      where,
+      include: { photos: true, tags: { include: { tag: true } } },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
   });
 
   app.put('/spots/:id', {
@@ -190,6 +218,42 @@ export function buildServer() {
     if (spot.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
     await prisma.spot.delete({ where: { id } });
     return { success: true };
+  });
+
+  // Tag management
+  app.get('/tags', async () => prisma.tag.findMany());
+
+  app.post('/tags', {
+    preHandler: [app.authenticate],
+    schema: {
+      body: z.object({ name: z.string() }),
+    },
+  }, async (req) => {
+    const { name } = req.body;
+    const tag = await prisma.tag.create({ data: { name } });
+    return tag;
+  });
+
+  // Voting
+  app.post('/spots/:id/vote', {
+    preHandler: [app.authenticate],
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      body: z.object({ value: z.number().int().refine((v) => Math.abs(v) === 1) }),
+    },
+  }, async (req) => {
+    const { id } = req.params;
+    const { value } = req.body;
+    await prisma.vote.upsert({
+      where: { userId_spotId: { userId: req.user.id, spotId: id } },
+      create: { userId: req.user.id, spotId: id, value },
+      update: { value },
+    });
+    const total = await prisma.vote.aggregate({
+      _sum: { value: true },
+      where: { spotId: id },
+    });
+    return { score: total._sum.value ?? 0 };
   });
 
   return app;
