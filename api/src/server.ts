@@ -2,6 +2,7 @@ import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRedis from '@fastify/redis';
 import fastifyCookie from '@fastify/cookie';
+import type { CookieSerializeOptions } from '@fastify/cookie';
 import { PrismaClient } from '@prisma/client';
 
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
@@ -37,6 +38,16 @@ export function buildServer() {
   const prisma = new PrismaClient();
   app.decorate('prisma', prisma);
 
+  const cookieOptions: CookieSerializeOptions = {
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE
+      ? process.env.COOKIE_SECURE === 'true'
+      : process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    domain: process.env.COOKIE_DOMAIN,
+  };
+
   app.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
       await request.jwtVerify();
@@ -70,7 +81,7 @@ export function buildServer() {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, passwordHash } });
     const token = app.jwt.sign({ id: user.id, email: user.email });
-    reply.setCookie('token', token, { httpOnly: true, path: '/' });
+    reply.setCookie('token', token, cookieOptions);
     const verificationToken = crypto.randomUUID();
     await (app.redis as unknown as RedisClient | undefined)?.set(`verify:${verificationToken}`, user.id, { EX: 60 * 60 });
     return { token, verificationToken };
@@ -97,7 +108,7 @@ export function buildServer() {
       return reply.status(401).send({ message: 'Email not verified' });
     }
     const token = app.jwt.sign({ id: user.id, email: user.email });
-    reply.setCookie('token', token, { httpOnly: true, path: '/' });
+    reply.setCookie('token', token, cookieOptions);
     return { token };
   });
 

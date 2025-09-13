@@ -11,7 +11,7 @@ export function createPrismaMock() {
   return {
     user: {
       async create({ data }: any) {
-        const user = { ...data, id: crypto.randomUUID() };
+        const user = { emailVerified: true, ...data, id: crypto.randomUUID() };
         users.set(user.id, user);
         return user;
       },
@@ -20,7 +20,7 @@ export function createPrismaMock() {
       },
     },
     async $executeRaw(_strings: TemplateStringsArray, ...values: any[]) {
-      const [id, name, description, lng, lat, userId] = values;
+      const [id, name, description, lng, lat, _facilities, _category, _isPublished, userId] = values;
       const spot = { id, name, description, lat, lng, userId };
       spots.set(id, spot);
       return 1;
