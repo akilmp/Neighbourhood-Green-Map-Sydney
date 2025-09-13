@@ -5,3 +5,10 @@ export interface Spot {
   lng: number;
   description: string;
 }
+
+export interface Route {
+  id: string;
+  name: string;
+  description?: string;
+  spots: { order: number; spot: Spot }[];
+}
