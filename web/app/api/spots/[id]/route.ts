@@ -1,12 +1,26 @@
 import { NextResponse } from 'next/server';
 
-const spots = [
-  { id: '1', name: 'Central Park', lat: -33.8688, lng: 151.2093, description: 'A nice park' },
-  { id: '2', name: 'Hyde Park', lat: -33.869, lng: 151.211, description: 'Another park' },
-];
+/**
+ * Fetches a single spot from the Fastify backend.
+ *
+ * As with the collection route, query parameters from the incoming request are
+ * forwarded so that the backend can apply any additional filtering or logic.
+ */
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!baseUrl) {
+    return NextResponse.json(
+      { error: 'NEXT_PUBLIC_API_URL is not configured' },
+      { status: 500 },
+    );
+  }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const spot = spots.find((s) => s.id === params.id);
-  if (!spot) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(spot);
+  const apiUrl = new URL(`/spots/${params.id}`, baseUrl);
+  const { search } = new URL(req.url);
+  apiUrl.search = search;
+
+  const res = await fetch(apiUrl.toString());
+  const data = await res.json();
+
+  return NextResponse.json(data, { status: res.status });
 }
