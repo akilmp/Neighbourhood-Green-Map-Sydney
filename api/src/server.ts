@@ -1,7 +1,9 @@
 import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRedis from '@fastify/redis';
-import { PrismaClient } from '@prisma/client';
+import fastifyCookie from '@fastify/cookie';
+import { PrismaClient, Spot } from '@prisma/client';
+
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
@@ -17,6 +19,7 @@ export function buildServer() {
   app.register(fastifyJwt, {
     secret: process.env.JWT_SECRET || 'supersecret',
   });
+  app.register(fastifyCookie);
   if (process.env.NODE_ENV !== 'test') {
     app.register(fastifyRedis, {
       url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -46,15 +49,18 @@ export function buildServer() {
         password: z.string().min(6),
       }),
       response: {
-        200: z.object({ token: z.string() }),
+        200: z.object({ token: z.string(), verificationToken: z.string().optional() }),
       },
     },
-  }, async (req) => {
+  }, async (req, reply) => {
     const { email, password } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, passwordHash } });
     const token = app.jwt.sign({ id: user.id, email: user.email });
-    return { token };
+    reply.setCookie('token', token, { httpOnly: true, path: '/' });
+    const verificationToken = crypto.randomUUID();
+    await (app.redis as any)?.set(`verify:${verificationToken}`, user.id, { EX: 60 * 60 });
+    return { token, verificationToken };
   });
 
   app.post('/login', {
@@ -74,8 +80,61 @@ export function buildServer() {
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return reply.status(401).send({ message: 'Invalid credentials' });
     }
+    if (!user.emailVerified) {
+      return reply.status(401).send({ message: 'Email not verified' });
+    }
     const token = app.jwt.sign({ id: user.id, email: user.email });
+    reply.setCookie('token', token, { httpOnly: true, path: '/' });
     return { token };
+  });
+
+  app.post('/verify-email', {
+    schema: {
+      body: z.object({ token: z.string() }),
+      response: {
+        200: z.object({ success: z.boolean() }),
+      },
+    },
+  }, async (req, reply) => {
+    const { token } = req.body;
+    const userId = await (app.redis as any)?.get(`verify:${token}`);
+    if (!userId) {
+      return reply.status(400).send({ success: false });
+    }
+    await prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
+    await (app.redis as any)?.del(`verify:${token}`);
+    return { success: true };
+  });
+
+  app.post('/request-password-reset', {
+    schema: {
+      body: z.object({ email: z.string().email() }),
+      response: { 200: z.object({ resetToken: z.string().optional() }) },
+    },
+  }, async (req) => {
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return { resetToken: undefined };
+    const token = crypto.randomUUID();
+    await (app.redis as any)?.set(`reset:${token}`, user.id, { EX: 60 * 60 });
+    return { resetToken: token };
+  });
+
+  app.post('/reset-password', {
+    schema: {
+      body: z.object({ token: z.string(), password: z.string().min(6) }),
+      response: { 200: z.object({ success: z.boolean() }) },
+    },
+  }, async (req, reply) => {
+    const { token, password } = req.body;
+    const userId = await (app.redis as any)?.get(`reset:${token}`);
+    if (!userId) {
+      return reply.status(400).send({ success: false });
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await (app.redis as any)?.del(`reset:${token}`);
+    return { success: true };
   });
 
   // Spot schema
