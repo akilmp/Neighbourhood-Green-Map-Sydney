@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes } from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 
 export default function Button({ className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
