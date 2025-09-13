@@ -560,6 +560,7 @@ pnpm --filter web dev
 * `NODE_ENV`, `PORT`
 * `DATABASE_URL` (Postgres)
 * `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` (PEM)
+* `NEXT_PUBLIC_API_URL` (frontend base URL for the API)
 * `COOKIE_DOMAIN`, `COOKIE_SECURE=true`
 * `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
 * `MAPBOX_TOKEN`
