@@ -1,0 +1,11 @@
+{
+  "name": "neighbourhood-green-map",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["api", "web"],
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  }
+}
