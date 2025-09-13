@@ -1,4 +1,4 @@
-import { Spot, Report } from './types';
+import { Spot, Report, Route } from './types';
 
 
 export interface SpotFilters {
@@ -41,4 +41,47 @@ export async function resolveReport(id: string, action: 'approve' | 'reject'): P
   });
   if (!res.ok) throw new Error('Failed to resolve report');
 
+}
+
+export async function fetchRoutes(): Promise<Route[]> {
+  const res = await fetch('/api/routes');
+  if (!res.ok) throw new Error('Failed to fetch routes');
+  return res.json();
+}
+
+export async function fetchRoute(id: string): Promise<Route> {
+  const res = await fetch(`/api/routes/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch route');
+  return res.json();
+}
+
+export interface RouteInput {
+  name: string;
+  description?: string;
+  spotIds: string[];
+}
+
+export async function createRoute(data: RouteInput): Promise<Route> {
+  const res = await fetch('/api/routes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create route');
+  return res.json();
+}
+
+export async function updateRoute(id: string, data: Partial<RouteInput>): Promise<Route> {
+  const res = await fetch(`/api/routes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update route');
+  return res.json();
+}
+
+export async function deleteRoute(id: string): Promise<void> {
+  const res = await fetch(`/api/routes/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete route');
 }
