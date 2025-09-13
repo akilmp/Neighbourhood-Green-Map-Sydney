@@ -16,6 +16,7 @@ model User {
   reports      Report[]
   auditLogs    AuditLog[]
   votes        Vote[]
+
   emailVerified Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -33,6 +34,7 @@ model Spot {
   tags        SpotTag[]
   votes       Vote[]
   reports     Report[]
+
   user        User?        @relation(fields: [userId], references: [id])
   userId      String?
   createdAt   DateTime     @default(now())
@@ -95,6 +97,7 @@ model AuditLog {
   userId    String
   action    String
   createdAt DateTime @default(now())
+
 }
 
 enum SpotCategory {
