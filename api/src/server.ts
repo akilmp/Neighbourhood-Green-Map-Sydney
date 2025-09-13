@@ -9,6 +9,8 @@ import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 type RedisClient = {
   set: (key: string, value: string, opts: { EX: number }) => Promise<unknown>;
@@ -64,6 +66,41 @@ export function buildServer() {
   });
 
   app.get('/', async () => ({ hello: 'world' }));
+
+  // Uploads
+  app.post('/uploads/presign', {
+    schema: {
+      body: z.object({
+        filename: z.string(),
+        contentType: z.string(),
+        size: z.number().int().positive(),
+      }),
+      response: {
+        200: z.object({ url: z.string().url(), key: z.string() }),
+      },
+    },
+  }, async (req) => {
+    const { filename, contentType, size } = req.body;
+    const s3 = new S3Client({
+      region: process.env.S3_REGION || 'us-east-1',
+      endpoint: process.env.S3_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY || '',
+        secretAccessKey: process.env.S3_SECRET_KEY || '',
+      },
+      forcePathStyle: true,
+    });
+
+    const key = `${crypto.randomUUID()}-${filename}`;
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: size,
+    });
+    const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    return { url, key };
+  });
 
   // Auth routes
   app.post('/register', {
@@ -270,12 +307,13 @@ export function buildServer() {
         bbox: z.string().optional(),
         radius: z.number().optional(),
         center: z.string().optional(),
+        category: z.enum(['park', 'garden', 'walk', 'lookout', 'playground', 'beach', 'other']).optional(),
         page: z.number().int().min(1).optional(),
         pageSize: z.number().int().min(1).max(100).optional(),
       }),
     },
   }, async (req) => {
-    const { q, tags, bbox, radius, center, page = 1, pageSize = 20 } = req.query;
+    const { q, tags, bbox, radius, center, category, page = 1, pageSize = 20 } = req.query;
     let ids: { id: string }[] | null = null;
 
     if (radius && center) {
@@ -293,6 +331,7 @@ export function buildServer() {
     const where: Record<string, unknown> = {};
     if (ids) where.id = { in: ids.map((r) => r.id) };
     if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (category) where.category = category;
     if (tags) {
       const tagArr = tags.split(',');
       where.tags = { some: { tag: { name: { in: tagArr } } } };

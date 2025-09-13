@@ -10,7 +10,12 @@ import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Spot } from '../lib/types';
 
-export default function Map({ spots }: { spots: Spot[] }) {
+interface MapProps {
+  spots: Spot[];
+  onMarkerClick?: (spot: Spot) => void;
+}
+
+export default function Map({ spots, onMarkerClick }: MapProps) {
   return (
     <MapContainer
       center={[-33.865143, 151.2099] as LatLngExpression}
@@ -30,7 +35,17 @@ export default function Map({ spots }: { spots: Spot[] }) {
         }}
       >
         {spots.map((spot) => (
-          <Marker key={spot.id} position={[spot.lat, spot.lng] as LatLngExpression}>
+          <Marker
+            key={spot.id}
+            position={[spot.lat, spot.lng] as LatLngExpression}
+            eventHandlers={
+              onMarkerClick
+                ? {
+                    click: () => onMarkerClick(spot),
+                  }
+                : undefined
+            }
+          >
             <Popup>{spot.name}</Popup>
           </Marker>
         ))}

@@ -1,11 +1,11 @@
-import { Spot, Report } from './types';
+import { Spot, Report, Route } from './types';
 
 
 export interface SpotFilters {
   bbox?: string;
   radius?: number;
   tags?: string[];
-  q?: string;
+  category?: string;
 }
 
 export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
@@ -13,7 +13,7 @@ export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
   if (filters.bbox) params.set('bbox', filters.bbox);
   if (typeof filters.radius === 'number') params.set('radius', String(filters.radius));
   if (filters.tags && filters.tags.length > 0) params.set('tags', filters.tags.join(','));
-  if (filters.q) params.set('q', filters.q);
+  if (filters.category) params.set('category', filters.category);
 
   const query = params.toString();
   const res = await fetch(`/api/spots${query ? `?${query}` : ''}`);
@@ -62,4 +62,32 @@ export async function addFavourite(spotId: string): Promise<Spot> {
 export async function removeFavourite(spotId: string): Promise<void> {
   const res = await fetch(`/api/me/favourites/${spotId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to remove favourite');
+}
+
+export async function fetchRoutes(): Promise<Route[]> {
+  const res = await fetch('/api/routes');
+  if (!res.ok) throw new Error('Failed to fetch routes');
+  return res.json();
+}
+
+export async function fetchRoute(id: string): Promise<Route> {
+  const res = await fetch(`/api/routes/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch route');
+  return res.json();
+}
+
+export interface CreateRouteInput {
+  name: string;
+  description?: string;
+  spotIds: string[];
+}
+
+export async function createRoute(input: CreateRouteInput): Promise<Route> {
+  const res = await fetch('/api/routes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error('Failed to create route');
+  return res.json();
 }
