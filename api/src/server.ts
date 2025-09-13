@@ -2,12 +2,18 @@ import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRedis from '@fastify/redis';
 import fastifyCookie from '@fastify/cookie';
-import { PrismaClient, Spot } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+
+type RedisClient = {
+  set: (key: string, value: string, opts: { EX: number }) => Promise<unknown>;
+  get: (key: string) => Promise<string | null>;
+  del: (key: string) => Promise<unknown>;
+};
 
 export function buildServer() {
   const app = Fastify().withTypeProvider<ZodTypeProvider>();
@@ -39,6 +45,13 @@ export function buildServer() {
     }
   });
 
+  app.decorate('adminOnly', async function (request: FastifyRequest, reply: FastifyReply) {
+    const user = await prisma.user.findUnique({ where: { id: request.user.id } });
+    if (user?.role !== 'admin') {
+      reply.status(403).send({ message: 'Forbidden' });
+    }
+  });
+
   app.get('/', async () => ({ hello: 'world' }));
 
   // Auth routes
@@ -59,7 +72,7 @@ export function buildServer() {
     const token = app.jwt.sign({ id: user.id, email: user.email });
     reply.setCookie('token', token, { httpOnly: true, path: '/' });
     const verificationToken = crypto.randomUUID();
-    await (app.redis as any)?.set(`verify:${verificationToken}`, user.id, { EX: 60 * 60 });
+    await (app.redis as unknown as RedisClient | undefined)?.set(`verify:${verificationToken}`, user.id, { EX: 60 * 60 });
     return { token, verificationToken };
   });
 
@@ -97,12 +110,12 @@ export function buildServer() {
     },
   }, async (req, reply) => {
     const { token } = req.body;
-    const userId = await (app.redis as any)?.get(`verify:${token}`);
+    const userId = await (app.redis as unknown as RedisClient | undefined)?.get(`verify:${token}`);
     if (!userId) {
       return reply.status(400).send({ success: false });
     }
     await prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
-    await (app.redis as any)?.del(`verify:${token}`);
+    await (app.redis as unknown as RedisClient | undefined)?.del(`verify:${token}`);
     return { success: true };
   });
 
@@ -116,7 +129,7 @@ export function buildServer() {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return { resetToken: undefined };
     const token = crypto.randomUUID();
-    await (app.redis as any)?.set(`reset:${token}`, user.id, { EX: 60 * 60 });
+    await (app.redis as unknown as RedisClient | undefined)?.set(`reset:${token}`, user.id, { EX: 60 * 60 });
     return { resetToken: token };
   });
 
@@ -127,13 +140,13 @@ export function buildServer() {
     },
   }, async (req, reply) => {
     const { token, password } = req.body;
-    const userId = await (app.redis as any)?.get(`reset:${token}`);
+    const userId = await (app.redis as unknown as RedisClient | undefined)?.get(`reset:${token}`);
     if (!userId) {
       return reply.status(400).send({ success: false });
     }
     const passwordHash = await bcrypt.hash(password, 10);
     await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-    await (app.redis as any)?.del(`reset:${token}`);
+    await (app.redis as unknown as RedisClient | undefined)?.del(`reset:${token}`);
     return { success: true };
   });
 
@@ -231,7 +244,7 @@ export function buildServer() {
       `;
     }
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (ids) where.id = { in: ids.map((r) => r.id) };
     if (q) where.name = { contains: q, mode: 'insensitive' };
     if (tags) {
@@ -396,38 +409,37 @@ export function buildServer() {
     return { score: total._sum.value ?? 0 };
   });
 
-  // Favourites
-  app.get('/me/favourites', {
-    preHandler: [app.authenticate],
-  }, async (req) => {
-    return prisma.spot.findMany({
-      where: { favourites: { some: { userId: req.user.id } } },
-      include: { photos: true, tags: { include: { tag: true } } },
-    });
+  app.get('/reports', {
+    preHandler: [app.authenticate, app.adminOnly],
+  }, async () => {
+    return prisma.report.findMany({ include: { spot: true } });
   });
 
-  app.post('/me/favourites/:id', {
-    preHandler: [app.authenticate],
-    schema: { params: z.object({ id: z.string().uuid() }) },
-  }, async (req) => {
-    const { id } = req.params;
-    await prisma.favourite.upsert({
-      where: { userId_spotId: { userId: req.user.id, spotId: id } },
-      create: { userId: req.user.id, spotId: id },
-      update: {},
-    });
-    return { success: true };
+  app.get('/moderation/queue', {
+    preHandler: [app.authenticate, app.adminOnly],
+  }, async () => {
+    return prisma.report.findMany({ where: { status: 'pending' }, include: { spot: true } });
   });
 
-  app.delete('/me/favourites/:id', {
-    preHandler: [app.authenticate],
-    schema: { params: z.object({ id: z.string().uuid() }) },
+  app.post('/reports/:id', {
+    preHandler: [app.authenticate, app.adminOnly],
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      body: z.object({ action: z.enum(['approve', 'reject']) }),
+    },
   }, async (req) => {
     const { id } = req.params;
-    await prisma.favourite.delete({
-      where: { userId_spotId: { userId: req.user.id, spotId: id } },
+    const { action } = req.body;
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    const report = await prisma.report.update({ where: { id }, data: { status }, include: { spot: true } });
+    await prisma.auditLog.create({
+      data: { reportId: report.id, userId: req.user.id, action },
     });
-    return { success: true };
+    if (action === 'approve') {
+      await prisma.spot.update({ where: { id: report.spotId }, data: { isPublished: false } });
+    }
+    return report;
+
   });
 
   return app;
@@ -438,6 +450,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     prisma: PrismaClient;
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    adminOnly: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 

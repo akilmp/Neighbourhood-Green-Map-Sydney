@@ -6,9 +6,12 @@ export interface Spot {
   description: string;
 }
 
-export interface Route {
+export interface Report {
   id: string;
-  name: string;
-  description?: string;
-  spots: { order: number; spot: Spot }[];
+  reason: string;
+  spot: {
+    id: string;
+    name: string;
+  };
+
 }

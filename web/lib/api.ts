@@ -1,4 +1,5 @@
-import { Spot, Route } from './types';
+import { Spot, Report } from './types';
+
 
 export interface SpotFilters {
   bbox?: string;
@@ -26,15 +27,18 @@ export async function fetchSpot(id: string): Promise<Spot> {
   return res.json();
 }
 
-export async function fetchRoutes(): Promise<Route[]> {
-  const res = await fetch('/api/routes');
-  if (!res.ok) throw new Error('Failed to fetch routes');
+export async function fetchModerationQueue(): Promise<Report[]> {
+  const res = await fetch('/api/moderation/queue');
+  if (!res.ok) throw new Error('Failed to fetch reports');
   return res.json();
 }
 
-export async function fetchRoute(id: string): Promise<Route> {
-  const res = await fetch(`/api/routes/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch route');
-  return res.json();
+export async function resolveReport(id: string, action: 'approve' | 'reject'): Promise<void> {
+  const res = await fetch(`/api/reports/${id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) throw new Error('Failed to resolve report');
 
 }
