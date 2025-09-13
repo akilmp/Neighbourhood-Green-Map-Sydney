@@ -1,41 +1,35 @@
 'use client';
 
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Button from '../../components/ui/Button';
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
   const router = useRouter();
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/login`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include',
+      body: JSON.stringify({ token, password }),
     });
-    router.push('/');
+    router.push('/login');
   };
 
   return (
     <form onSubmit={handleSubmit} className="p-4 space-y-4 max-w-sm mx-auto">
       <input
-        className="border p-2 w-full"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-      />
-      <input
         type="password"
         className="border p-2 w-full"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
+        placeholder="New Password"
       />
-      <Button type="submit" className="w-full">Sign In</Button>
+      <Button type="submit" className="w-full">Reset Password</Button>
     </form>
   );
 }

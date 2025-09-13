@@ -4,20 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../../components/ui/Button';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/login`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
       credentials: 'include',
     });
-    router.push('/');
+    router.push('/login');
   };
 
   return (
@@ -35,7 +35,7 @@ export default function LoginPage() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
       />
-      <Button type="submit" className="w-full">Sign In</Button>
+      <Button type="submit" className="w-full">Register</Button>
     </form>
   );
 }
