@@ -13,7 +13,7 @@ model User {
   passwordHash String
   spots        Spot[]
   votes        Vote[]
-  favourites   Favourite[]
+  routes       Route[]
   emailVerified Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -30,7 +30,8 @@ model Spot {
   photos      SpotPhoto[]
   tags        SpotTag[]
   votes       Vote[]
-  favourites  Favourite[]
+  routes      RouteSpot[]
+
   user        User?        @relation(fields: [userId], references: [id])
   userId      String?
   createdAt   DateTime     @default(now())
@@ -73,14 +74,27 @@ model Vote {
   @@id([userId, spotId])
 }
 
-model Favourite {
-  user      User @relation(fields: [userId], references: [id])
-  userId    String
-  spot      Spot @relation(fields: [spotId], references: [id])
-  spotId    String
-  createdAt DateTime @default(now())
+model Route {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  user        User?        @relation(fields: [userId], references: [id])
+  userId      String?
+  spots       RouteSpot[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
 
-  @@id([userId, spotId])
+model RouteSpot {
+  route   Route @relation(fields: [routeId], references: [id])
+  routeId String
+  spot    Spot  @relation(fields: [spotId], references: [id])
+  spotId  String
+  order   Int
+
+  @@id([routeId, spotId])
+  @@unique([routeId, order])
+
 }
 
 enum SpotCategory {

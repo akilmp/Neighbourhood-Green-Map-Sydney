@@ -150,6 +150,12 @@ export function buildServer() {
     isPublished: z.boolean().optional(),
   });
 
+  const routeBody = z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    spotIds: z.array(z.string().uuid()).default([]),
+  });
+
   // Spots CRUD
   app.post('/spots', {
     preHandler: [app.authenticate],
@@ -276,6 +282,81 @@ export function buildServer() {
     if (!spot) return reply.status(404).send({ message: 'Not found' });
     if (spot.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
     await prisma.spot.delete({ where: { id } });
+    return { success: true };
+  });
+
+  // Routes CRUD
+  app.get('/routes', {
+    preHandler: [app.authenticate],
+  }, async () => {
+    return prisma.route.findMany({
+      include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
+    });
+  });
+
+  app.post('/routes', {
+    preHandler: [app.authenticate],
+    schema: {
+      body: routeBody,
+    },
+  }, async (req) => {
+    const { name, description, spotIds } = req.body;
+    return prisma.route.create({
+      data: {
+        name,
+        description,
+        userId: req.user.id,
+        spots: { create: spotIds.map((id, idx) => ({ spotId: id, order: idx })) },
+      },
+      include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
+    });
+  });
+
+  app.get('/routes/:id', {
+    preHandler: [app.authenticate],
+    schema: { params: z.object({ id: z.string().uuid() }) },
+  }, async (req, reply) => {
+    const { id } = req.params;
+    const route = await prisma.route.findUnique({
+      where: { id },
+      include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
+    });
+    if (!route) return reply.status(404).send({ message: 'Not found' });
+    return route;
+  });
+
+  app.put('/routes/:id', {
+    preHandler: [app.authenticate],
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      body: routeBody.partial(),
+    },
+  }, async (req, reply) => {
+    const { id } = req.params;
+    const { name, description, spotIds } = req.body;
+    const route = await prisma.route.findUnique({ where: { id } });
+    if (!route) return reply.status(404).send({ message: 'Not found' });
+    if (route.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
+    return prisma.route.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        ...(spotIds ? { spots: { deleteMany: {}, create: spotIds.map((sid, idx) => ({ spotId: sid, order: idx })) } } : {}),
+      },
+      include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
+    });
+  });
+
+  app.delete('/routes/:id', {
+    preHandler: [app.authenticate],
+    schema: { params: z.object({ id: z.string().uuid() }) },
+  }, async (req, reply) => {
+    const { id } = req.params;
+    const route = await prisma.route.findUnique({ where: { id } });
+    if (!route) return reply.status(404).send({ message: 'Not found' });
+    if (route.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
+    await prisma.route.delete({ where: { id } });
     return { success: true };
   });
 
