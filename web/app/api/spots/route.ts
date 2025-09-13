@@ -2,8 +2,15 @@ import { NextResponse } from 'next/server';
 
 const apiBase = process.env.API_URL || 'http://localhost:3001';
 
-export async function GET() {
-  const res = await fetch(`${apiBase}/spots`);
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const params = new URLSearchParams();
+  for (const key of ['bbox', 'radius', 'tags', 'q']) {
+    const value = url.searchParams.get(key);
+    if (value) params.set(key, value);
+  }
+  const query = params.toString();
+  const res = await fetch(`${apiBase}/spots${query ? `?${query}` : ''}`);
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
