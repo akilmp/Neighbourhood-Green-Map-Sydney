@@ -2,8 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { fetchRoute } from '../../../lib/api';
 import Map from '../../../components/Map';
+import { fetchRoute } from '../../../lib/api';
 
 export default function RoutePage() {
   const params = useParams();
@@ -26,6 +26,14 @@ export default function RoutePage() {
       </div>
       <div className="h-64">
         <Map spots={spots} />
+      </div>
+      <div>
+        <h2 className="text-xl font-semibold">Spots</h2>
+        <ol className="list-decimal pl-5 space-y-1">
+          {data.spots.map((rs) => (
+            <li key={rs.spot.id}>{rs.spot.name}</li>
+          ))}
+        </ol>
       </div>
     </div>
   );
