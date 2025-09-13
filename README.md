@@ -43,12 +43,6 @@
 
 > Personal angle: The app is seeded with places I actually go (e.g., post‑work quiet spots near Central, weekend harbourside walks). Entries include my short notes and original photos, giving the project an unmistakably personal fingerprint.
 
-**Primary outcomes for employers**
-
-* Demonstrates a *complete* product lifecycle: requirements → architecture → data → API → frontend → deployment → observability.
-* Highlights geospatial engineering with PostGIS, auth, rate‑limiting, image uploads, and a11y.
-* Shows engineering taste: pragmatic choices, clean interfaces, and a focus on real users in Sydney.
-
 ---
 
 ## 2) Goals & Non‑Goals
