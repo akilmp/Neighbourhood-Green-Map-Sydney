@@ -1,29 +1,20 @@
 import { NextResponse } from 'next/server';
 
-/**
- * Proxies requests for spots to the Fastify backend.
- *
- * The API base URL is read from NEXT_PUBLIC_API_URL so the same code can run
- * both locally and in production. Any query parameters included in the incoming
- * request (e.g. `radius`, `bbox`) are forwarded to the backend so it can handle
- * geospatial filtering.
- */
-export async function GET(req: Request) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!baseUrl) {
-    return NextResponse.json(
-      { error: 'NEXT_PUBLIC_API_URL is not configured' },
-      { status: 500 },
-    );
-  }
+const apiBase = process.env.API_URL || 'http://localhost:3001';
 
-  // Construct the backend URL and propagate any query parameters from the
-  // incoming request.
-  const apiUrl = new URL('/spots', baseUrl);
-  const { search } = new URL(req.url);
-  apiUrl.search = search;
+export async function GET() {
+  const res = await fetch(`${apiBase}/spots`);
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
 
-  const res = await fetch(apiUrl.toString());
+export async function POST(req: Request) {
+  const body = await req.json();
+  const res = await fetch(`${apiBase}/spots`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
   const data = await res.json();
 
   return NextResponse.json(data, { status: res.status });
