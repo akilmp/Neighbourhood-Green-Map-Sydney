@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const apiBase = process.env.API_URL || 'http://localhost:3001';
+const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const res = await fetch(`${apiBase}/me/favourites/${params.id}`, { method: 'POST' });

@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'File too large' }, { status: 400 });
   }
 
-  const apiBase = process.env.API_URL || 'http://localhost:3001';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const res = await fetch(`${apiBase}/uploads/presign`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

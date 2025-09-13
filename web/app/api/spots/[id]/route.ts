@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 /**
  * Fetches a single spot from the Fastify backend.
  *
@@ -7,15 +9,7 @@ import { NextResponse } from 'next/server';
  * forwarded so that the backend can apply any additional filtering or logic.
  */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!baseUrl) {
-    return NextResponse.json(
-      { error: 'NEXT_PUBLIC_API_URL is not configured' },
-      { status: 500 },
-    );
-  }
-
-  const apiUrl = new URL(`/spots/${params.id}`, baseUrl);
+  const apiUrl = new URL(`/spots/${params.id}`, apiBase);
   const { search } = new URL(req.url);
   apiUrl.search = search;
 
