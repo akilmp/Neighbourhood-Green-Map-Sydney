@@ -1,4 +1,4 @@
-import { Spot, Report } from './types';
+import { Spot, Report, Route } from './types';
 
 
 export interface SpotFilters {
@@ -62,4 +62,32 @@ export async function addFavourite(spotId: string): Promise<Spot> {
 export async function removeFavourite(spotId: string): Promise<void> {
   const res = await fetch(`/api/me/favourites/${spotId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to remove favourite');
+}
+
+export async function fetchRoutes(): Promise<Route[]> {
+  const res = await fetch('/api/routes');
+  if (!res.ok) throw new Error('Failed to fetch routes');
+  return res.json();
+}
+
+export async function fetchRoute(id: string): Promise<Route> {
+  const res = await fetch(`/api/routes/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch route');
+  return res.json();
+}
+
+export interface CreateRouteInput {
+  name: string;
+  description?: string;
+  spotIds: string[];
+}
+
+export async function createRoute(input: CreateRouteInput): Promise<Route> {
+  const res = await fetch('/api/routes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error('Failed to create route');
+  return res.json();
 }
