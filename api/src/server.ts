@@ -1,4 +1,5 @@
 import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
+import * as Sentry from '@sentry/node';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRedis from '@fastify/redis';
 import fastifyCookie from '@fastify/cookie';
@@ -19,7 +20,19 @@ type RedisClient = {
 };
 
 export function buildServer() {
+  const enableSentry = !!process.env.SENTRY_DSN;
+  if (enableSentry) {
+    Sentry.init({ dsn: process.env.SENTRY_DSN });
+  }
+
   const app = Fastify().withTypeProvider<ZodTypeProvider>();
+
+  app.setErrorHandler((error, request, reply) => {
+    if (enableSentry) {
+      Sentry.captureException(error);
+    }
+    reply.send(error);
+  });
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
