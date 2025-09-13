@@ -5,7 +5,8 @@
     "allowJs": true,
     "noEmit": true,
     "isolatedModules": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "types": ["vitest/globals"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "test"],
   "exclude": ["node_modules"]
