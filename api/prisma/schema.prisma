@@ -31,6 +31,7 @@ model Spot {
   tags        SpotTag[]
   votes       Vote[]
   routes      RouteSpot[]
+
   user        User?        @relation(fields: [userId], references: [id])
   userId      String?
   createdAt   DateTime     @default(now())
@@ -93,6 +94,7 @@ model RouteSpot {
 
   @@id([routeId, spotId])
   @@unique([routeId, order])
+
 }
 
 enum SpotCategory {

@@ -22,4 +22,5 @@ export async function fetchRoute(id: string): Promise<Route> {
   const res = await fetch(`/api/routes/${id}`);
   if (!res.ok) throw new Error('Failed to fetch route');
   return res.json();
+
 }
