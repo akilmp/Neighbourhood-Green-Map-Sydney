@@ -259,12 +259,13 @@ export function buildServer() {
         bbox: z.string().optional(),
         radius: z.number().optional(),
         center: z.string().optional(),
+        category: z.enum(['park', 'garden', 'walk', 'lookout', 'playground', 'beach', 'other']).optional(),
         page: z.number().int().min(1).optional(),
         pageSize: z.number().int().min(1).max(100).optional(),
       }),
     },
   }, async (req) => {
-    const { q, tags, bbox, radius, center, page = 1, pageSize = 20 } = req.query;
+    const { q, tags, bbox, radius, center, category, page = 1, pageSize = 20 } = req.query;
     let ids: { id: string }[] | null = null;
 
     if (radius && center) {
@@ -282,6 +283,7 @@ export function buildServer() {
     const where: Record<string, unknown> = {};
     if (ids) where.id = { in: ids.map((r) => r.id) };
     if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (category) where.category = category;
     if (tags) {
       const tagArr = tags.split(',');
       where.tags = { some: { tag: { name: { in: tagArr } } } };

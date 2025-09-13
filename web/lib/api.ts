@@ -5,7 +5,7 @@ export interface SpotFilters {
   bbox?: string;
   radius?: number;
   tags?: string[];
-  q?: string;
+  category?: string;
 }
 
 export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
@@ -13,7 +13,7 @@ export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
   if (filters.bbox) params.set('bbox', filters.bbox);
   if (typeof filters.radius === 'number') params.set('radius', String(filters.radius));
   if (filters.tags && filters.tags.length > 0) params.set('tags', filters.tags.join(','));
-  if (filters.q) params.set('q', filters.q);
+  if (filters.category) params.set('category', filters.category);
 
   const query = params.toString();
   const res = await fetch(`/api/spots${query ? `?${query}` : ''}`);
