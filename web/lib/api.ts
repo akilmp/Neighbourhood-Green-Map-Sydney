@@ -3,6 +3,7 @@ import { Spot, Report, Route } from './types';
 
 export interface SpotFilters {
   bbox?: string;
+  center?: string;
   radius?: number;
   tags?: string[];
   category?: string;
@@ -11,6 +12,7 @@ export interface SpotFilters {
 export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
   const params = new URLSearchParams();
   if (filters.bbox) params.set('bbox', filters.bbox);
+  if (filters.center) params.set('center', filters.center);
   if (typeof filters.radius === 'number') params.set('radius', String(filters.radius));
   if (filters.tags && filters.tags.length > 0) params.set('tags', filters.tags.join(','));
   if (filters.category) params.set('category', filters.category);

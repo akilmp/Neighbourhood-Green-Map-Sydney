@@ -1,6 +1,7 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
+import Link from 'next/link';
 import Script from 'next/script';
 
 import QueryProvider from '../components/QueryProvider';
