@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, type Mock } from 'vitest';
 import SpotPage from '../app/spots/[id]/page';
@@ -8,7 +8,9 @@ import type { Spot } from '../lib/types';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: '1' }) }));
 vi.mock('next/link', () => ({
-  default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+  default: ({ children, ...props }: ComponentProps<'a'>) => (
+    <a {...props}>{children}</a>
+  ),
 }));
 vi.mock('../lib/api', () => ({ fetchSpot: vi.fn() }));
 

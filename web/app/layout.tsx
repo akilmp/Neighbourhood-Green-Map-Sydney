@@ -3,11 +3,11 @@ import { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
-import Link from 'next/link';
 
 import QueryProvider from '../components/QueryProvider';
 import { SessionProvider } from 'next-auth/react';
 import AuthButton from '../components/AuthButton';
+import Pwa from '../components/Pwa';
 import '../lib/sentry';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -19,6 +19,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className={inter.className + ' min-h-screen flex flex-col'}>
         {plausibleDomain && !analyticsDisabled && (
           <Script
@@ -40,6 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <main className="flex-1">{children}</main>
           </QueryProvider>
         </SessionProvider>
+        <Pwa />
       </body>
     </html>
   );

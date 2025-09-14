@@ -34,6 +34,7 @@
 27. Appendix: Sample SQL & Queries
 28. Appendix: Wireframes (text) & Component Inventory
 29. Appendix: Sample Seed Data (Sydney spots)
+30. PWA Installation & Offline Use
 
 ---
 
@@ -764,4 +765,14 @@ WHERE id = $1;
    * *Note:* Expansive lawns; off‑leash areas popular in late arvo.
    * Facilities: toilets ✅, water ✅, dog‑friendly ✅
    * Tags: dog, spacious, heritage
+
+---
+
+## 30) PWA Installation & Offline Use
+
+The app can be installed on modern browsers and continues to work with limited connectivity:
+
+* **Installation** – When viewing the site, use the browser's install prompt or "Add to Home Screen" option to install it as a standalone app.
+* **Offline behaviour** – Static assets and any OpenStreetMap tiles you've already viewed are cached for reuse. After exploring an area of the map, those tiles remain available even without a network connection.
+* **Limitations** – New map areas and fresh data still require an internet connection.
 
