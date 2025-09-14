@@ -27,3 +27,17 @@ export interface Report {
   };
 
 }
+
+export interface Route {
+  id: string;
+  name: string;
+  description?: string;
+  spots: RouteSpot[];
+}
+
+export interface RouteSpot {
+  routeId: string;
+  spotId: string;
+  order: number;
+  spot: Spot;
+}
