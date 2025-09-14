@@ -9,9 +9,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/register`, {
+    await fetch(`${apiUrl}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
