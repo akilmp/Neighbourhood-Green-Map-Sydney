@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSpot } from '../../../lib/api';
@@ -55,6 +56,12 @@ export default function SpotPage() {
         </div>
       )}
       <div className="font-semibold">Score: {data.voteScore ?? 0}</div>
+      <Link
+        href={`/spots/${id}/report`}
+        className="inline-block bg-red-500 text-white px-4 py-2 rounded"
+      >
+        Report
+      </Link>
     </div>
   );
 }
