@@ -20,7 +20,8 @@ type RedisClient = {
 };
 
 export function buildServer() {
-  const enableSentry = !!process.env.SENTRY_DSN;
+  const enableSentry =
+    !!process.env.SENTRY_DSN && process.env.DISABLE_ANALYTICS !== 'true';
   if (enableSentry) {
     Sentry.init({ dsn: process.env.SENTRY_DSN });
   }

@@ -2,6 +2,7 @@ import './globals.css';
 import { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
+import Link from 'next/link';
 
 import QueryProvider from '../components/QueryProvider';
 import { SessionProvider } from 'next-auth/react';
@@ -11,12 +12,14 @@ import '../lib/sentry';
 const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+  const plausibleDomain = process.env.PLAUSIBLE_DOMAIN;
+  const analyticsDisabled =
+    process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === 'true';
 
   return (
     <html lang="en">
       <body className={inter.className + ' min-h-screen flex flex-col'}>
-        {plausibleDomain && (
+        {plausibleDomain && !analyticsDisabled && (
           <Script
             src={`https://${plausibleDomain}/js/script.js`}
             data-domain={plausibleDomain}
