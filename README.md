@@ -566,7 +566,7 @@ pnpm --filter web dev
 * `MAPBOX_TOKEN`
 * `RATE_LIMIT_WINDOW=600000`, `RATE_LIMIT_MAX=100`
 * `EMAIL_SMTP_URL` (for verification/reset)
-* `PLAUSIBLE_DOMAIN`
+* `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
 **Key management**
 

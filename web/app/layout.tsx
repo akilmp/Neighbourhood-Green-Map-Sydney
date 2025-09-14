@@ -13,7 +13,7 @@ import '../lib/sentry';
 const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const plausibleDomain = process.env.PLAUSIBLE_DOMAIN;
+  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
   const analyticsDisabled =
     process.env.NEXT_PUBLIC_DISABLE_ANALYTICS === 'true';
 
