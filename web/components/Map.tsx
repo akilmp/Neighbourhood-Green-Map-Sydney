@@ -61,6 +61,7 @@ export default function Map({ spots, onMarkerClick, onLocation }: MapProps) {
       <LocateControl onLocate={onLocation} />
       <MarkerClusterGroup
         chunkedLoading
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         iconCreateFunction={(cluster: any) => {
           const count = cluster.getChildCount();
           const size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
