@@ -263,6 +263,9 @@ export function buildServer() {
   const routeBody = z.object({
     name: z.string(),
     description: z.string().optional(),
+    distanceKm: z.number(),
+    isPublished: z.boolean().optional(),
+    path: z.array(z.tuple([z.number(), z.number()])),
     spotIds: z.array(z.string().uuid()).default([]),
   });
 
@@ -397,13 +400,21 @@ export function buildServer() {
     return { success: true };
   });
 
+  async function addPath<T extends { id: string }>(route: T) {
+    const [{ path }] = await prisma.$queryRaw<{ path: string }[]>`
+      SELECT ST_AsGeoJSON(path) as path FROM "Route" WHERE id = ${route.id}
+    `;
+    return { ...route, path: JSON.parse(path) };
+  }
+
   // Routes CRUD
   app.get('/routes', {
     preHandler: [app.authenticate],
   }, async () => {
-    return prisma.route.findMany({
+    const routes = await prisma.route.findMany({
       include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
     });
+    return Promise.all(routes.map((r) => addPath(r)));
   });
 
   app.post('/routes', {
@@ -412,16 +423,21 @@ export function buildServer() {
       body: routeBody,
     },
   }, async (req) => {
-    const { name, description, spotIds } = req.body;
-    return prisma.route.create({
-      data: {
-        name,
-        description,
-        userId: req.user.id,
-        spots: { create: spotIds.map((id, idx) => ({ spotId: id, order: idx })) },
-      },
+    const { name, description, distanceKm, isPublished = false, path, spotIds } = req.body;
+    const id = crypto.randomUUID();
+    const geojson = { type: 'LineString', coordinates: path };
+    await prisma.$executeRaw`INSERT INTO "Route"(id, name, description, "distanceKm", "isPublished", path, "ownerId")
+VALUES (${id}, ${name}, ${description}, ${distanceKm}, ${isPublished}, ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4326), ${req.user.id})`;
+    if (spotIds.length) {
+      await prisma.routeSpot.createMany({
+        data: spotIds.map((sid, idx) => ({ routeId: id, spotId: sid, order: idx })),
+      });
+    }
+    const route = await prisma.route.findUnique({
+      where: { id },
       include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
     });
+    return addPath(route!);
   });
 
   app.get('/routes/:id', {
@@ -434,7 +450,7 @@ export function buildServer() {
       include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
     });
     if (!route) return reply.status(404).send({ message: 'Not found' });
-    return route;
+    return addPath(route);
   });
 
   app.put('/routes/:id', {
@@ -445,19 +461,34 @@ export function buildServer() {
     },
   }, async (req, reply) => {
     const { id } = req.params;
-    const { name, description, spotIds } = req.body;
+    const { name, description, distanceKm, isPublished, path, spotIds } = req.body;
     const route = await prisma.route.findUnique({ where: { id } });
     if (!route) return reply.status(404).send({ message: 'Not found' });
-    if (route.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
-    return prisma.route.update({
+    if (route.ownerId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
+
+    if (path) {
+      await prisma.$executeRaw`UPDATE "Route" SET path = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify({ type: 'LineString', coordinates: path })}), 4326) WHERE id = ${id}`;
+    }
+
+    const updated = await prisma.route.update({
       where: { id },
       data: {
         name,
         description,
-        ...(spotIds ? { spots: { deleteMany: {}, create: spotIds.map((sid, idx) => ({ spotId: sid, order: idx })) } } : {}),
+        distanceKm,
+        isPublished,
+        ...(spotIds
+          ? {
+              spots: {
+                deleteMany: {},
+                create: spotIds.map((sid, idx) => ({ spotId: sid, order: idx })),
+              },
+            }
+          : {}),
       },
       include: { spots: { include: { spot: true }, orderBy: { order: 'asc' } } },
     });
+    return addPath(updated);
   });
 
   app.delete('/routes/:id', {
@@ -467,7 +498,7 @@ export function buildServer() {
     const { id } = req.params;
     const route = await prisma.route.findUnique({ where: { id } });
     if (!route) return reply.status(404).send({ message: 'Not found' });
-    if (route.userId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
+    if (route.ownerId !== req.user.id) return reply.status(403).send({ message: 'Forbidden' });
     await prisma.route.delete({ where: { id } });
     return { success: true };
   });
