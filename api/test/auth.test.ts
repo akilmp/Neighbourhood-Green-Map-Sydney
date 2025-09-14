@@ -15,6 +15,15 @@ vi.mock('@fastify/redis', () => ({
   default: (_f: any, _o: any, done: any) => done(),
 }));
 
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: class {},
+  PutObjectCommand: class {},
+}));
+
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockResolvedValue(''),
+}));
+
 import { buildServer } from '../src/server';
 
 describe('auth routes', () => {

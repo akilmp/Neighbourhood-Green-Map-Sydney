@@ -7,7 +7,7 @@ vi.mock('@prisma/client', () => ({
     constructor() {
       return createPrismaMock();
     }
-  }
+  },
 }));
 
 vi.mock('@aws-sdk/client-s3', () => ({
@@ -21,9 +21,11 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 
 import { buildServer } from '../src/server';
 
-describe('spots CRUD', () => {
+describe('routes CRUD', () => {
   let app: ReturnType<typeof buildServer>;
   let token: string;
+  let spot1: string;
+  let spot2: string;
 
   beforeEach(async () => {
     app = buildServer();
@@ -33,53 +35,80 @@ describe('spots CRUD', () => {
       payload: { email: 'test@example.com', password: 'secret123' },
     });
     token = register.json().token;
-  });
-
-  it('creates, retrieves, updates and deletes a spot', async () => {
-    const createRes = await app.inject({
+    const s1 = await app.inject({
       method: 'POST',
       url: '/spots',
-      payload: { name: 'My Spot', lat: 1, lng: 2, category: 'park' },
+      payload: { name: 'S1', lat: 0, lng: 0, category: 'park' },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    spot1 = s1.json().id;
+    const s2 = await app.inject({
+      method: 'POST',
+      url: '/spots',
+      payload: { name: 'S2', lat: 1, lng: 1, category: 'park' },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    spot2 = s2.json().id;
+  });
+
+  it('creates, retrieves, updates and deletes a route', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/routes',
+      payload: {
+        name: 'My Route',
+        description: 'Desc',
+        distanceKm: 1.2,
+        path: [
+          [0, 0],
+          [1, 1],
+        ],
+        spotIds: [spot1, spot2],
+        isPublished: true,
+      },
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(createRes.statusCode).toBe(200);
-    const id = createRes.json().id;
+    const route = createRes.json();
+    expect(route.spots.length).toBe(2);
+    expect(route.path.coordinates.length).toBe(2);
+    const id = route.id;
 
     const getRes = await app.inject({
       method: 'GET',
-      url: `/spots/${id}`,
+      url: `/routes/${id}`,
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.json().name).toBe('My Spot');
+    expect(getRes.json().name).toBe('My Route');
 
     const listRes = await app.inject({
       method: 'GET',
-      url: '/spots',
+      url: '/routes',
       headers: { Authorization: `Bearer ${token}` },
     });
-    expect(listRes.statusCode).toBe(200);
     expect(listRes.json().length).toBe(1);
 
     const updateRes = await app.inject({
       method: 'PUT',
-      url: `/spots/${id}`,
-      payload: { name: 'Updated Spot' },
+      url: `/routes/${id}`,
+      payload: { name: 'Updated Route', spotIds: [spot2, spot1] },
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(updateRes.statusCode).toBe(200);
-    expect(updateRes.json().name).toBe('Updated Spot');
+    expect(updateRes.json().name).toBe('Updated Route');
+    expect(updateRes.json().spots[0].spotId).toBe(spot2);
 
     const deleteRes = await app.inject({
       method: 'DELETE',
-      url: `/spots/${id}`,
+      url: `/routes/${id}`,
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(deleteRes.statusCode).toBe(200);
 
     const afterList = await app.inject({
       method: 'GET',
-      url: '/spots',
+      url: '/routes',
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(afterList.json().length).toBe(0);
