@@ -602,6 +602,13 @@ pnpm --filter web dev
 
 * Structured logs (pino) with request id; shipped to Logtail/ELK.
 * Metrics: /metrics Prometheus exporter; dashboards for RPS, latency, error rate.
+  * Enable by starting the API with `ENABLE_METRICS=true`, e.g.:
+
+    ```bash
+    ENABLE_METRICS=true pnpm --filter api dev
+    ```
+
+  * Visit `http://localhost:3000/metrics` to inspect default and custom metrics.
 * Alerts: high 5xx, DB connection pool saturation, storage failures.
 
 ---
