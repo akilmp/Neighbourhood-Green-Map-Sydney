@@ -7,12 +7,13 @@ export function createPrismaMock() {
   const photos: any[] = [];
   const tags = new Map<string, any>();
   const spotTags: any[] = [];
+  const routes = new Map<string, any>();
+  let routeSpots: any[] = [];
 
   return {
     user: {
       async create({ data }: any) {
         const user = { emailVerified: true, ...data, id: crypto.randomUUID() };
-
         users.set(user.id, user);
         return user;
       },
@@ -20,11 +21,34 @@ export function createPrismaMock() {
         return Array.from(users.values()).find((u) => u.email === email) ?? null;
       },
     },
-    async $executeRaw(_strings: TemplateStringsArray, ...values: any[]) {
-      const [id, name, description, lng, lat, _facilities, _category, _isPublished, userId] = values;
-      const spot = { id, name, description, lat, lng, userId };
-
-      spots.set(id, spot);
+    async $executeRaw(strings: TemplateStringsArray, ...values: any[]) {
+      const query = strings[0];
+      if (query.includes('INSERT INTO "Spot"')) {
+        const [id, name, description, lng, lat, _facilities, _category, _isPublished, userId] = values;
+        const spot = { id, name, description, lat, lng, userId };
+        spots.set(id, spot);
+        return 1;
+      }
+      if (query.includes('INSERT INTO "Route"')) {
+        const [id, name, description, distanceKm, isPublished, path, ownerId] = values;
+        const route = {
+          id,
+          name,
+          description,
+          distanceKm,
+          isPublished,
+          ownerId,
+          path: JSON.parse(path),
+        };
+        routes.set(id, route);
+        return 1;
+      }
+      if (query.includes('UPDATE "Route" SET path')) {
+        const [path, id] = values;
+        const route = routes.get(id);
+        if (route) route.path = JSON.parse(path);
+        return 1;
+      }
       return 1;
     },
     spotPhoto: {
@@ -94,8 +118,67 @@ export function createPrismaMock() {
         return spot;
       },
     },
-    async $queryRaw() {
+    async $queryRaw(strings?: TemplateStringsArray, ...values: any[]) {
+      const query = strings ? strings[0] : '';
+      if (query.includes('FROM "Route"')) {
+        const id = values[0];
+        const route = routes.get(id);
+        return [{ path: JSON.stringify(route?.path) }];
+      }
       return Array.from(spots.values());
+    },
+    routeSpot: {
+      async createMany({ data }: any) {
+        routeSpots.push(...data);
+        return { count: data.length };
+      },
+      async deleteMany({ where: { routeId } }: any) {
+        const before = routeSpots.length;
+        routeSpots = routeSpots.filter((rs) => rs.routeId !== routeId);
+        return { count: before - routeSpots.length };
+      },
+    },
+    route: {
+      async findMany() {
+        return Array.from(routes.values()).map((route) => ({
+          ...route,
+          spots: routeSpots
+            .filter((rs) => rs.routeId === route.id)
+            .sort((a, b) => a.order - b.order)
+            .map((rs) => ({ ...rs, spot: spots.get(rs.spotId) })),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }));
+      },
+      async findUnique({ where: { id } }: any) {
+        const route = routes.get(id);
+        if (!route) return null;
+        return {
+          ...route,
+          spots: routeSpots
+            .filter((rs) => rs.routeId === id)
+            .sort((a, b) => a.order - b.order)
+            .map((rs) => ({ ...rs, spot: spots.get(rs.spotId) })),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      },
+      async update({ where: { id }, data }: any) {
+        const route = routes.get(id);
+        if (!route) throw new Error('Not found');
+        Object.assign(route, data);
+        if (data.spots) {
+          routeSpots = routeSpots.filter((rs) => rs.routeId !== id);
+          routeSpots.push(...data.spots.create.map((d: any) => ({ routeId: id, ...d })));
+        }
+        return this.findUnique({ where: { id } });
+      },
+      async delete({ where: { id } }: any) {
+        const route = routes.get(id);
+        routes.delete(id);
+        routeSpots = routeSpots.filter((rs) => rs.routeId !== id);
+        return route;
+      },
     },
   };
 }

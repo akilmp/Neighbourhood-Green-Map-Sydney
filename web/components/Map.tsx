@@ -63,6 +63,7 @@ export default function Map({ spots, onMarkerClick, onLocation }: MapProps) {
         chunkedLoading
         iconCreateFunction={(cluster: unknown) => {
           const count = (cluster as { getChildCount: () => number }).getChildCount();
+
           const size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
           return L.divIcon({
             html: `<span>${count}</span>`,

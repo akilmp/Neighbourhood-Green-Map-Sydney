@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildServer } from '../src/server';
+
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: class {},
+  PutObjectCommand: class {},
+}));
+
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockResolvedValue(''),
+}));
 
 describe('root route', () => {
   it('returns hello', async () => {
