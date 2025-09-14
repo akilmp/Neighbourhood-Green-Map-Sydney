@@ -12,12 +12,14 @@ export default function HomePage() {
     tags: '',
     radius: 1000,
   });
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data } = useQuery({
-    queryKey: ['spots', filters],
+    queryKey: ['spots', filters, userLocation],
     queryFn: () =>
       fetchSpots({
         radius: filters.radius,
+        center: userLocation ? `${userLocation.lng},${userLocation.lat}` : undefined,
         tags: filters.tags
           ? filters.tags.split(',').map((t) => t.trim()).filter(Boolean)
           : undefined,
@@ -31,7 +33,7 @@ export default function HomePage() {
     <div className="h-full flex flex-col">
       <FilterBar filters={filters} onChange={setFilters} />
       <div className="flex-1">
-        <Map spots={data} />
+        <Map spots={data} onLocation={setUserLocation} />
       </div>
     </div>
   );
