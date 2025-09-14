@@ -8,6 +8,7 @@ import { fetchSpots } from '../lib/api';
 
 export default function HomePage() {
   const [filters, setFilters] = useState<FilterState>({
+    q: '',
     category: '',
     tags: '',
     radius: 1000,
@@ -17,6 +18,7 @@ export default function HomePage() {
     queryKey: ['spots', filters],
     queryFn: () =>
       fetchSpots({
+        q: filters.q || undefined,
         radius: filters.radius,
         tags: filters.tags
           ? filters.tags.split(',').map((t) => t.trim()).filter(Boolean)
