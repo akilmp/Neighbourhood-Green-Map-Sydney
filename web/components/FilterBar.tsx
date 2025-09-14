@@ -3,6 +3,7 @@
 import React from 'react';
 
 export interface FilterState {
+  q: string;
   category: string;
   tags: string;
   radius: number;
@@ -21,6 +22,13 @@ export default function FilterBar({
 
   return (
     <div className="flex gap-2 p-2 bg-white shadow z-[1000]">
+      <input
+        type="text"
+        className="border p-1"
+        placeholder="Search name"
+        value={filters.q}
+        onChange={(e) => handleChange('q', e.target.value)}
+      />
       <select
         className="border p-1"
         value={filters.category}

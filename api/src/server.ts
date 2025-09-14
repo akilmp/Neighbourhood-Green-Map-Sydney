@@ -343,7 +343,7 @@ export function buildServer() {
 
     const where: Record<string, unknown> = {};
     if (ids) where.id = { in: ids.map((r) => r.id) };
-    if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (q) where.name = { contains: q };
     if (category) where.category = category;
     if (tags) {
       const tagArr = tags.split(',');
