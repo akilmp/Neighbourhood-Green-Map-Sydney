@@ -1,17 +1,16 @@
-import React from 'react';
+import React, { type ComponentProps } from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import SubmitPage from '../app/submit/page';
 
-vi.mock('react-leaflet', () => {
-  const React = require('react');
-  return {
-    MapContainer: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    TileLayer: () => <div />,
-    Marker: () => <div />,
-    useMapEvents: () => {},
-  };
-});
+vi.mock('react-leaflet', () => ({
+  MapContainer: ({ children, ...props }: ComponentProps<'div'>) => (
+    <div {...props}>{children}</div>
+  ),
+  TileLayer: () => <div />,
+  Marker: () => <div />,
+  useMapEvents: () => {},
+}));
 
 describe('SubmitPage', () => {
   const originalFetch = global.fetch;
