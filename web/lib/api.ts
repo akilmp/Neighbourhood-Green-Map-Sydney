@@ -28,7 +28,24 @@ export async function fetchSpots(filters: SpotFilters = {}): Promise<Spot[]> {
 export async function fetchSpot(id: string): Promise<Spot> {
   const res = await fetch(`/api/spots/${id}`);
   if (!res.ok) throw new Error('Failed to fetch spot');
-  return res.json();
+  const data = await res.json();
+  return {
+    ...data,
+    facilities: data.facilities ?? {},
+    photos: data.photos ?? [],
+    tags: data.tags
+      ? data.tags.map(
+          (
+            t: {
+              tag?: { id: string; name: string };
+              id: string;
+              name?: string;
+            }
+          ) => (t.tag ? { id: t.tag.id, name: t.tag.name } : { id: t.id, name: t.name || '' })
+        )
+      : [],
+    voteScore: data.voteScore ?? data.score ?? 0,
+  };
 }
 
 export async function fetchModerationQueue(): Promise<Report[]> {

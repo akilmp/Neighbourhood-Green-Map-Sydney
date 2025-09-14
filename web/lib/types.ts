@@ -1,9 +1,23 @@
+export interface SpotPhoto {
+  id: string;
+  url: string;
+}
+
+export interface SpotTag {
+  id: string;
+  name: string;
+}
+
 export interface Spot {
   id: string;
   name: string;
   lat: number;
   lng: number;
   description: string;
+  facilities?: Record<string, boolean>;
+  photos?: SpotPhoto[];
+  tags?: SpotTag[];
+  voteScore?: number;
 }
 
 export interface RouteSpot {
