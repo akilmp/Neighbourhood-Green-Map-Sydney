@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { collectDefaultMetrics, Counter, register } from 'prom-client';
 
 type RedisClient = {
   set: (key: string, value: string, opts: { EX: number }) => Promise<unknown>;
@@ -27,6 +28,24 @@ export function buildServer() {
   }
 
   const app = Fastify().withTypeProvider<ZodTypeProvider>();
+
+  if (process.env.ENABLE_METRICS === 'true') {
+    collectDefaultMetrics();
+    const httpRequestsTotal = new Counter({
+      name: 'http_requests_total',
+      help: 'Total number of HTTP requests received',
+    });
+
+    app.addHook('onRequest', (_, __, done) => {
+      httpRequestsTotal.inc();
+      done();
+    });
+
+    app.get('/metrics', async (_, reply) => {
+      reply.header('Content-Type', register.contentType);
+      return register.metrics();
+    });
+  }
 
   app.setErrorHandler((error, request, reply) => {
     if (enableSentry) {
