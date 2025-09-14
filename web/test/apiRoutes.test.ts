@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GET as listSpots } from '../app/api/spots/route';
 import { GET as getSpot } from '../app/api/spots/[id]/route';
+import { POST as submitReport } from '../app/api/reports/route';
 
 const apiBase = 'http://localhost:3001';
 const originalFetch = global.fetch;
@@ -74,5 +75,30 @@ describe('spots API routes', () => {
       center: '6,7',
     }).toString();
     expect(fetchMock).toHaveBeenCalledWith(`${apiBase}/spots?${expected}`);
+  });
+});
+
+describe('reports API route', () => {
+  it('submits a report', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: vi.fn().mockResolvedValue({ id: 'r1' }),
+      status: 200,
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const req = new Request('http://example.com', {
+      method: 'POST',
+      body: JSON.stringify({ spotId: '1', reason: 'Bad spot' }),
+    });
+
+    const res = await submitReport(req);
+    await res.json();
+
+    expect(fetchMock).toHaveBeenCalledWith(`${apiBase}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spotId: '1', reason: 'Bad spot' }),
+    });
+    expect(res.status).toBe(200);
   });
 });

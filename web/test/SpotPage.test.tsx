@@ -7,6 +7,9 @@ import { fetchSpot } from '../lib/api';
 import type { Spot } from '../lib/types';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: '1' }) }));
+vi.mock('next/link', () => ({
+  default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+}));
 vi.mock('../lib/api', () => ({ fetchSpot: vi.fn() }));
 
 describe('SpotPage', () => {
@@ -32,6 +35,7 @@ describe('SpotPage', () => {
     await screen.findByText('Test Spot');
     expect(screen.getByTitle('toilets')).toBeTruthy();
     expect(screen.getByAltText('Test Spot photo 1')).toBeTruthy();
+    expect(screen.getByText('Report').getAttribute('href')).toBe('/spots/1/report');
   });
 });
 
